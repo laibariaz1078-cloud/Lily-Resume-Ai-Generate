@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.adminRouter = void 0;
+const express_1 = require("express");
+const admin_controller_1 = require("../controllers/admin.controller");
+const admin_middleware_1 = require("../middleware/admin.middleware");
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const async_handler_1 = require("../utils/async-handler");
+exports.adminRouter = (0, express_1.Router)();
+exports.adminRouter.use(auth_middleware_1.authMiddleware, admin_middleware_1.adminMiddleware);
+exports.adminRouter.get('/stats', (0, async_handler_1.asyncHandler)(admin_controller_1.adminStats));
+exports.adminRouter.get('/users/count', (0, async_handler_1.asyncHandler)(admin_controller_1.adminUserCount));
+exports.adminRouter.get('/subscriptions/stats', (0, async_handler_1.asyncHandler)(admin_controller_1.adminSubscriptionStats));
+exports.adminRouter.get('/system/health', (0, async_handler_1.asyncHandler)(admin_controller_1.adminSystemHealth));

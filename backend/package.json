@@ -7,12 +7,11 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
+    "dev": "node --watch src/server.js",
+    "build": "node scripts/build.js",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test:smoke": "tsx src/testing/integration-smoke.ts",
-    "test:validation": "tsx --test src/testing/validation.test.ts"
+    "test:smoke": "node src/testing/integration-smoke.js",
+    "test:validation": "node --test src/testing/validation.test.js src/testing/model-schema.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -26,16 +25,5 @@
     "nodemailer": "^10.0.13",
     "pdfkit": "^0.20.2",
     "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.3",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^22.20.4",
-    "@types/nodemailer": "^6.4.17",
-    "@types/pdfkit": "^0.17.6",
-    "tsx": "^4.19.2",
-    "typescript": "^5.9.3"
   }
 }

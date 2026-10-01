@@ -1,0 +1,16 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.jobsRouter = void 0;
+const express_1 = require("express");
+const jobs_controller_1 = require("../controllers/jobs.controller");
+const ai_rate_limit_middleware_1 = require("../middleware/ai-rate-limit.middleware");
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const ai_usage_limit_middleware_1 = require("../middleware/ai-usage-limit.middleware");
+const require_plan_middleware_1 = require("../middleware/require-plan.middleware");
+const validate_body_1 = require("../middleware/validate-body");
+const job_validator_1 = require("../validators/job.validator");
+exports.jobsRouter = (0, express_1.Router)();
+exports.jobsRouter.use(auth_middleware_1.authMiddleware, ai_rate_limit_middleware_1.aiRateLimit, ai_usage_limit_middleware_1.aiUsageLimit);
+exports.jobsRouter.post('/analyze', (0, validate_body_1.validateBody)(job_validator_1.analyzeJobSchema), jobs_controller_1.analyzeJob);
+exports.jobsRouter.post('/match-resume', (0, validate_body_1.validateBody)(job_validator_1.matchResumeSchema), jobs_controller_1.matchResume);
+exports.jobsRouter.post('/tailor', (0, require_plan_middleware_1.requirePlan)('PREMIUM'), (0, validate_body_1.validateBody)(job_validator_1.tailorJobSchema), jobs_controller_1.tailorResume);

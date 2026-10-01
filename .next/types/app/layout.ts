@@ -1,4 +1,4 @@
-// File: D:\Resume AI Builder\app\layout.js
+// File: D:\Lily Resume Ai Generate\app\layout.js
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

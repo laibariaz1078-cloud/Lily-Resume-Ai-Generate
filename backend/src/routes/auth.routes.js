@@ -1,0 +1,16 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.authRouter = void 0;
+const express_1 = require("express");
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const auth_rate_limit_middleware_1 = require("../middleware/auth-rate-limit.middleware");
+const validate_body_1 = require("../middleware/validate-body");
+const auth_controller_1 = require("../controllers/auth.controller");
+const auth_validator_1 = require("../validators/auth.validator");
+exports.authRouter = (0, express_1.Router)();
+exports.authRouter.post('/signup', auth_rate_limit_middleware_1.authRateLimit, (0, validate_body_1.validateBody)(auth_validator_1.signupSchema), auth_controller_1.signup);
+exports.authRouter.post('/login', auth_rate_limit_middleware_1.authRateLimit, (0, validate_body_1.validateBody)(auth_validator_1.loginSchema), auth_controller_1.login);
+exports.authRouter.get('/me', auth_middleware_1.authMiddleware, auth_controller_1.currentUser);
+exports.authRouter.post('/logout', auth_middleware_1.authMiddleware, auth_controller_1.logout);
+exports.authRouter.post('/forgot-password', auth_rate_limit_middleware_1.authRateLimit, (0, validate_body_1.validateBody)(auth_validator_1.forgotPasswordSchema), auth_controller_1.forgotPassword);
+exports.authRouter.post('/reset-password', auth_rate_limit_middleware_1.authRateLimit, (0, validate_body_1.validateBody)(auth_validator_1.resetPasswordSchema), auth_controller_1.resetPasswordHandler);

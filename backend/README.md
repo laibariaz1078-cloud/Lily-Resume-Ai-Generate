@@ -26,7 +26,7 @@ For a local MongoDB service, the example URI uses `mongodb://127.0.0.1:27017/Lil
 npm run dev
 ```
 
-Development uses `tsx` watch mode and listens on port 4000 by default. Compile and run the production build with:
+Development uses Node's built-in watch mode and listens on port 4000 by default. Build and run the production JavaScript with:
 
 ```bash
 npm run build
@@ -72,11 +72,10 @@ src/
   models/       Mongoose models
   routes/       versionable REST route composition
   services/     user-safe serialization and password-reset email workflow
-  types/        request and token types
   utils/        API errors, JWT helpers, response helpers
   validators/   Zod request schemas
-  app.ts        Express middleware and route composition
-  server.ts     database-first startup and graceful shutdown
+  app.js        Express middleware and route composition
+  server.js     database-first startup and graceful shutdown
 ```
 
 All JSON responses use `{ "success", "message", "data" }`; errors use `{ "success": false, "message", "errors": [] }`. PDF export returns a private, no-store PDF attachment. Production responses never include stack traces, request bodies, authorization headers, or provider credentials in logs. Helmet, origin-restricted CORS, a 256 KB JSON limit (100 KB max per resume data object), API and authentication rate limits, strict Zod schemas, Mongoose filter sanitization, and safe request timing logs are enabled. Application indexes are explicitly created during database startup even when automatic indexing is disabled in production.

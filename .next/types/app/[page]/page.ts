@@ -1,4 +1,4 @@
-// File: D:\Resume AI Builder\app\[page]\page.js
+// File: D:\Lily Resume Ai Generate\app\[page]\page.js
 import * as entry from '../../../../app/[page]/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

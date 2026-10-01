@@ -30,8 +30,29 @@ export const profileUpdateSchema = z.object({
   profileImage: profileImage.nullable().optional(),
 }).strict().refine((value) => Object.keys(value).length > 0, 'Provide at least one profile field to update');
 
+export const profileDetailsSchema = z.object({
+  name: z.string().trim().min(2).max(100).optional(),
+  email: email.optional(),
+  profileImage: profileImage.nullable().optional(),
+}).strict().refine((value) => Object.keys(value).length > 0, 'Provide at least one profile field to update');
+
+export const passwordChangeSchema = z.object({
+  currentPassword: password,
+  newPassword: password,
+}).strict().refine((input) => input.currentPassword !== input.newPassword, {
+  path: ['newPassword'],
+  message: 'New password must differ from the current password',
+});
+
+export const userSettingsSchema = z.object({
+  theme: z.enum(['LIGHT', 'DARK', 'SYSTEM']).optional(),
+  notifications: z.object({ weeklySummary: z.boolean().optional(), productNews: z.boolean().optional() }).strict().optional(),
+  ai: z.object({ suggestions: z.boolean().optional(), considerJobDescriptions: z.boolean().optional(), requireReview: z.boolean().optional() }).strict().optional(),
+}).strict().refine((value) => Object.keys(value).length > 0, 'Provide at least one settings field to update');
+
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
+export type ProfileDetailsInput = z.infer<typeof profileDetailsSchema>;

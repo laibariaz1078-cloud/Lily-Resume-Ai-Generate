@@ -5,6 +5,7 @@ export interface AuthenticatedUser {
   name: string;
   email: string;
   profileImage: string | null;
+  settings: Record<string, unknown>;
   role: UserRole;
   plan: UserPlan;
   isEmailVerified: boolean;

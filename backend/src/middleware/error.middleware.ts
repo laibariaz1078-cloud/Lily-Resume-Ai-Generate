@@ -1,6 +1,6 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import mongoose from 'mongoose';
-import { ApiError, type ApiFieldError } from '../utils/api-error';
+import { AppError, ApiError, type ApiFieldError } from '../utils/api-error';
 import { env } from '../config/env';
 
 function isDuplicateKeyError(error: unknown): error is { code: number; keyPattern?: Record<string, unknown> } {
@@ -8,7 +8,7 @@ function isDuplicateKeyError(error: unknown): error is { code: number; keyPatter
 }
 
 export const notFoundMiddleware: RequestHandler = (req, _res, next) => {
-  next(new ApiError(404, `Route not found: ${req.method} ${req.path}`));
+  next(new ApiError(404, 'Route not found'));
 };
 
 export const errorMiddleware: ErrorRequestHandler = (error, req, res, _next) => {
@@ -16,7 +16,7 @@ export const errorMiddleware: ErrorRequestHandler = (error, req, res, _next) => 
   let message = 'An unexpected error occurred';
   let errors: ApiFieldError[] = [];
 
-  if (error instanceof ApiError) {
+  if (error instanceof AppError) {
     statusCode = error.statusCode;
     message = error.expose ? error.message : message;
     errors = error.expose ? error.errors : [];
@@ -27,6 +27,15 @@ export const errorMiddleware: ErrorRequestHandler = (error, req, res, _next) => 
   } else if (error instanceof mongoose.Error.CastError) {
     statusCode = 400;
     message = 'Invalid request value';
+  } else if (error instanceof mongoose.Error.MongooseServerSelectionError || error instanceof mongoose.mongo.MongoNetworkError) {
+    statusCode = 503;
+    message = 'Database service is temporarily unavailable';
+  } else if (error instanceof mongoose.Error.StrictModeError) {
+    statusCode = 400;
+    message = 'Request contains unsupported fields';
+  } else if (error instanceof Error && (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError' || error.name === 'NotBeforeError')) {
+    statusCode = 401;
+    message = 'Invalid or expired authentication token';
   } else if (isDuplicateKeyError(error)) {
     statusCode = 409;
     message = error.keyPattern?.email ? 'An account with this email already exists' : 'A record with this value already exists';
@@ -38,8 +47,8 @@ export const errorMiddleware: ErrorRequestHandler = (error, req, res, _next) => 
     message = 'Request body is too large';
   }
 
-  if (statusCode >= 500 && env.NODE_ENV !== 'production') {
-    console.error('API request failed', { method: req.method, path: req.path, error });
+  if (statusCode >= 500) {
+    console.error('API request failed', { method: req.method, path: req.path, errorName: error instanceof Error ? error.name : 'UnknownError' });
   }
 
   res.status(statusCode).json({ success: false, message, errors });

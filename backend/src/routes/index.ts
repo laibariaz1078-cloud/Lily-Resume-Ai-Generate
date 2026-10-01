@@ -1,9 +1,21 @@
 import { Router } from 'express';
 import { health } from '../controllers/health.controller';
 import { authRouter } from './auth.routes';
+import { aiRouter } from './ai.routes';
+import { jobsRouter } from './jobs.routes';
+import { resumesRouter } from './resumes.routes';
+import { templatesRouter } from './templates.routes';
+import { subscriptionRouter } from './subscription.routes';
+import { adminRouter } from './admin.routes';
 import { usersRouter } from './users.routes';
 
 export const apiRouter = Router();
 apiRouter.get('/health', health);
 apiRouter.use('/auth', authRouter);
+apiRouter.use('/ai', aiRouter);
+apiRouter.use('/jobs', jobsRouter);
+apiRouter.use('/templates', templatesRouter);
+apiRouter.use('/resumes', resumesRouter);
 apiRouter.use('/users', usersRouter);
+apiRouter.use('/subscription', subscriptionRouter);
+apiRouter.use('/admin', adminRouter);

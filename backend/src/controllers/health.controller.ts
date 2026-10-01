@@ -1,6 +1,5 @@
 import type { RequestHandler } from 'express';
 import mongoose from 'mongoose';
-import { env } from '../config/env';
 
 export const health: RequestHandler = (_req, res) => {
   const databaseConnected = mongoose.connection.readyState === 1;
@@ -14,7 +13,6 @@ export const health: RequestHandler = (_req, res) => {
       server: 'running',
       database: databaseConnected ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString(),
-      environment: env.NODE_ENV,
     },
   });
 };

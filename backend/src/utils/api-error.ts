@@ -3,16 +3,23 @@ export interface ApiFieldError {
   message: string;
 }
 
-export class ApiError extends Error {
+export class AppError extends Error {
   readonly statusCode: number;
   readonly errors: ApiFieldError[];
   readonly expose: boolean;
 
   constructor(statusCode: number, message: string, errors: ApiFieldError[] = [], expose = true) {
     super(message);
-    this.name = 'ApiError';
+    this.name = 'AppError';
     this.statusCode = statusCode;
     this.errors = errors;
     this.expose = expose;
+  }
+}
+
+export class ApiError extends AppError {
+  constructor(statusCode: number, message: string, errors: ApiFieldError[] = [], expose = true) {
+    super(statusCode, message, errors, expose);
+    this.name = 'ApiError';
   }
 }

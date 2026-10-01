@@ -20,6 +20,11 @@ const envSchema = z.object({
   SMTP_PASSWORD: z.string().default(''),
   SMTP_FROM: z.string().default('Lily Studio <no-reply@example.com>'),
   PASSWORD_RESET_URL: z.string().url().default('http://localhost:3000/reset-password'),
+  AI_PROVIDER: z.enum(['openai', 'anthropic']).default('openai'),
+  AI_API_KEY: z.string().default(''),
+  AI_MODEL: z.string().default(''),
+  FREE_AI_MONTHLY_LIMIT: z.coerce.number().int().min(0).default(50),
+  PREMIUM_AI_MONTHLY_LIMIT: z.coerce.number().int().min(1).default(1000),
 });
 
 const parsed = envSchema.safeParse(process.env);

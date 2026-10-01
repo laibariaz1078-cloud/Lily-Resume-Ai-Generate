@@ -11,6 +11,7 @@ export interface UserDocument extends Document {
   email: string;
   password: string;
   profileImage: string | null;
+  settings: Record<string, unknown>;
   role: UserRole;
   plan: UserPlan;
   isEmailVerified: boolean;
@@ -29,6 +30,14 @@ const userSchema = new Schema<UserDocument>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, maxlength: 254 },
     password: { type: String, required: true, select: false },
     profileImage: { type: String, default: null, maxlength: 2048 },
+    settings: {
+      type: Schema.Types.Mixed,
+      default: () => ({
+        theme: 'SYSTEM',
+        notifications: { weeklySummary: true, productNews: false },
+        ai: { suggestions: true, considerJobDescriptions: true, requireReview: true },
+      }),
+    },
     role: { type: String, enum: USER_ROLES, default: 'USER', required: true },
     plan: { type: String, enum: USER_PLANS, default: 'FREE', required: true },
     isEmailVerified: { type: Boolean, default: false, required: true },

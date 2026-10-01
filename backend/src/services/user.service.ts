@@ -11,6 +11,7 @@ export function toSafeUser(user: UserDocument): AuthenticatedUser & {
     name: user.name,
     email: user.email,
     profileImage: user.profileImage,
+    settings: user.settings,
     role: user.role,
     plan: user.plan,
     isEmailVerified: user.isEmailVerified,

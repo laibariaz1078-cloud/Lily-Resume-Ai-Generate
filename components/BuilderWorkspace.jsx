@@ -10,7 +10,7 @@ import {
 import Paper from '@/components/Paper';
 import AiBar from '@/components/AiBar';
 import { LISTS, SECTIONS, blank, keywordGaps } from '@/lib/resume';
-import { colorPalettes, getTemplateConfig, normalizeResumeConfig, resumeTemplates } from '@/lib/resume-design';
+import { colorPalettes, designPresets, getTemplateConfig, normalizeResumeConfig, resumeTemplates } from '@/lib/resume-design';
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const oldTemplateIds = { modern: 'arden', classic: 'scholar', minimal: 'plain' };
@@ -112,7 +112,12 @@ export default function BuilderWorkspace() {
   const [zoom, setZoom] = useState(80);
   const [templateModal, setTemplateModal] = useState(false);
   const [templatePreview, setTemplatePreview] = useState(null);
+  const [compareDesigns, setCompareDesigns] = useState(false);
   const [resumeManagerOpen, setResumeManagerOpen] = useState(false);
+  const [guidedStartOpen, setGuidedStartOpen] = useState(false);
+  const [guidedDraft, setGuidedDraft] = useState({ role: '', strengths: '', target: '' });
+  const [savedPalettes, setSavedPalettes] = useState([]);
+  const [mixerPreset, setMixerPreset] = useState({ typography: 'Editorial', layout: 'Modern Split', color: 'Midnight', spacing: 'Comfortable', headings: 'Minimal' });
   const [customType, setCustomType] = useState('');
   const [past, setPast] = useState([]);
   const [future, setFuture] = useState([]);
@@ -131,6 +136,7 @@ export default function BuilderWorkspace() {
       const params = new URLSearchParams(window.location.search);
       const selectedTemplate = resumeTemplates.find((item) => item.id === params.get('template'));
       const mode = params.get('mode');
+      const source = params.get('source');
 
       if (selectedTemplate && mode === 'use') {
         const nextResume = blank();
@@ -141,6 +147,11 @@ export default function BuilderWorkspace() {
         const normalized = normalizeResume(nextResume);
         list.push(normalized);
         cur = normalized.id;
+      } else if (mode === 'start') {
+        const nextResume = normalizeResume(blank());
+        list.push(nextResume);
+        cur = nextResume.id;
+        if (source === 'guided') setGuidedStartOpen(true);
       }
       if (!list.length) {
         const firstResume = normalizeResume(blank());
@@ -150,11 +161,21 @@ export default function BuilderWorkspace() {
       setStore({ cur, list });
       if (selectedTemplate && mode === 'preview') setTemplatePreview(selectedTemplate);
       if (selectedTemplate) window.history.replaceState(window.history.state, '', '/builder');
+      else if (mode === 'start') window.history.replaceState(window.history.state, '', '/builder');
     } catch (error) {
       console.error('Could not load saved resumes.', error);
       const firstResume = normalizeResume(blank());
       setStore({ cur: firstResume.id, list: [firstResume] });
       setSaveStatus('Could not load saved data');
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('lily-custom-palettes') || '[]');
+      if (Array.isArray(saved)) setSavedPalettes(saved);
+    } catch (error) {
+      console.error('Could not load saved color palettes.', error);
     }
   }, []);
 
@@ -208,6 +229,50 @@ export default function BuilderWorkspace() {
     item.config[group][nested][key] = value;
     return item;
   });
+  const updateConfigPatch = (patch) => changeResume((item) => {
+    item.config = normalizeResumeConfig({
+      ...item.config,
+      ...patch,
+      typography: { ...item.config.typography, ...patch.typography },
+      layout: { ...item.config.layout, ...patch.layout },
+      style: { ...item.config.style, ...patch.style },
+      colors: { ...item.config.colors, ...patch.colors },
+      accentTargets: { ...item.config.accentTargets, ...patch.accentTargets },
+    }, item.order);
+    item.color = item.config.colors.accent;
+    item.font = item.config.typography.bodyFont;
+    return item;
+  });
+  const applyDesignPreset = (preset) => {
+    updateConfigPatch(preset.config);
+    notify(`${preset.name} style applied.`);
+  };
+  const applyMixer = () => {
+    const palette = colorPalettes.find((item) => item.name === mixerPreset.color);
+    const font = mixerPreset.typography === 'Editorial' ? ['Georgia', 'Georgia'] : mixerPreset.typography === 'Classic' ? ['Merriweather', 'Georgia'] : ['Inter', 'Inter'];
+    const spacing = mixerPreset.spacing === 'Compact' ? 7 : mixerPreset.spacing === 'Spacious' ? 17 : 12;
+    const headingStyle = mixerPreset.headings === 'Minimal' ? 'plain' : mixerPreset.headings === 'Framed' ? 'top-bottom' : 'underline';
+    updateConfigPatch({
+      typography: { bodyFont: font[0], headingFont: font[1], nameFont: font[1] },
+      layout: { columns: mixerPreset.layout === 'Modern Split' ? 'two' : mixerPreset.layout === 'Sidebar' ? 'mix' : 'one', density: mixerPreset.spacing.toLowerCase() },
+      spacing: { spaceBetweenSections: spacing },
+      style: { headingStyle },
+      colors: palette ? { text: palette.text, background: palette.background, accent: palette.accent, sidebar: palette.sidebar || '#F4F5F1', divider: palette.divider || '#DDE3DC' } : {},
+    });
+    notify('Your custom design mix is ready.');
+  };
+  const saveCurrentPalette = () => {
+    const palette = { name: `My palette ${savedPalettes.length + 1}`, ...config.colors };
+    const next = [...savedPalettes.filter((item) => item.name !== palette.name), palette];
+    setSavedPalettes(next);
+    try {
+      localStorage.setItem('lily-custom-palettes', JSON.stringify(next));
+      notify('Color palette saved in this browser.');
+    } catch (error) {
+      console.error('Could not save custom color palette.', error);
+      notify('Could not save this palette. Check browser storage.');
+    }
+  };
 
   const applyTemplate = (templateId) => {
     const template = resumeTemplates.find((item) => item.id === templateId);
@@ -392,17 +457,35 @@ export default function BuilderWorkspace() {
 
             {tab === 'design' && <>
               <div className="studio-panel-title"><span>MAKE IT YOURS</span><h2>Design</h2><p>Every change updates your preview as you work.</p></div>
+              <ControlGroup title="Style presets" hint="Apply a coordinated starting style">
+                <div className="studio-style-presets">{designPresets.map((preset) => <button key={preset.name} onClick={() => applyDesignPreset(preset)}><span style={{ '--preset-accent': preset.config.colors.accent, '--preset-sidebar': preset.config.colors.sidebar }}><i/><i/><i/></span>{preset.name}</button>)}</div>
+                <button className="studio-compare-button" onClick={() => setCompareDesigns(true)}>Compare designs <ChevronDown size={14}/></button>
+              </ControlGroup>
+              <ControlGroup title="Design Mixer" hint="Blend a few details to create your own look">
+                <div className="studio-mixer-grid">
+                  {[
+                    ['typography', 'Typography', ['Editorial', 'Modern', 'Classic']],
+                    ['layout', 'Layout', ['One column', 'Modern Split', 'Sidebar']],
+                    ['color', 'Color', colorPalettes.map((palette) => palette.name)],
+                    ['spacing', 'Spacing', ['Compact', 'Comfortable', 'Spacious']],
+                    ['headings', 'Headings', ['Minimal', 'Underline', 'Framed']],
+                  ].map(([key, label, options]) => <label key={key}>{label}<select value={mixerPreset[key]} onChange={(event) => setMixerPreset((current) => ({ ...current, [key]: event.target.value }))}>{options.map((option) => <option key={option}>{option}</option>)}</select></label>)}
+                </div>
+                <div className="studio-mixer-result"><span><Sparkles size={15}/><b>Your Custom Design</b></span><small>Live changes are still yours to refine.</small><button onClick={applyMixer}>Mix this design <ArrowUp size={13}/></button></div>
+              </ControlGroup>
               <ControlGroup title="Document">
                 <ChoiceRow label="Language" value={config.document.language} options={['English (US)', 'English (UK)', 'English (Canada)', 'Spanish', 'French', 'Other']} onChange={(value) => updateConfig('document', 'language', value)}/>
                 <ChoiceRow label="Date format" value={config.document.dateFormat} options={['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD', 'Month YYYY', 'MM/YYYY']} onChange={(value) => updateConfig('document', 'dateFormat', value)}/>
                 <ChoiceRow label="Page format" value={config.document.pageFormat} options={['A4', 'US Letter']} onChange={(value) => updateConfig('document', 'pageFormat', value)}/>
               </ControlGroup>
               <ControlGroup title="Typography">
-                <ChoiceRow label="Font family" value={config.typography.bodyFont} options={fontOptions} onChange={(value) => changeResume((item) => { item.config.typography.bodyFont = value; item.config.typography.nameFont = value; item.font = value; return item; })}/>
+                <div className="studio-font-previews">{fontOptions.map((font) => <button key={font} className={config.typography.bodyFont === font ? 'selected' : ''} onClick={() => updateConfigPatch({ typography: { bodyFont: font } })}><b style={{ fontFamily: font }}>{font}</b><span style={{ fontFamily: font }}>The quick brown fox</span></button>)}</div>
+                <ChoiceRow label="Heading font" value={config.typography.headingFont} options={fontOptions} onChange={(value) => updateConfig('typography', 'headingFont', value)}/>
                 <RangeRow label="Body size" value={config.typography.baseFontSize} min={8} max={14} step={0.5} unit=" pt" onChange={(value) => updateConfig('typography', 'baseFontSize', value)}/>
                 <RangeRow label="Full name" value={config.typography.headingSizes.fullName} min={16} max={38} step={0.5} unit=" pt" onChange={(value) => updateNestedConfig('typography', 'headingSizes', 'fullName', value)}/>
                 <RangeRow label="Professional title" value={config.typography.headingSizes.title} min={9} max={22} step={0.5} unit=" pt" onChange={(value) => updateNestedConfig('typography', 'headingSizes', 'title', value)}/>
                 <RangeRow label="Section heading" value={config.typography.headingSizes.sectionHeading} min={8} max={18} step={0.5} unit=" pt" onChange={(value) => updateNestedConfig('typography', 'headingSizes', 'sectionHeading', value)}/>
+                <RangeRow label="Letter spacing" value={config.typography.letterSpacing} min={-0.5} max={1.5} step={0.05} unit=" pt" onChange={(value) => updateConfig('typography', 'letterSpacing', value)}/>
                 <ChoiceRow label="Font weight" value={config.typography.fontWeight} options={[[300, 'Light'], [400, 'Regular'], [500, 'Medium']]} onChange={(value) => updateConfig('typography', 'fontWeight', Number(value))}/>
               </ControlGroup>
               <ControlGroup title="Spacing">
@@ -432,12 +515,22 @@ export default function BuilderWorkspace() {
                 <ChoiceRow label="Subtitle" value={config.layout.subtitlePlacement} options={[['below-title', 'Below title'], ['same-line', 'Same line']]} onChange={(value) => updateConfig('layout', 'subtitlePlacement', value)}/>
               </ControlGroup>
               <ControlGroup title="Color palettes">
-                <div className="studio-palette-grid">{colorPalettes.map((palette) => <button key={palette.name} className={config.colors.accent === palette.accent ? 'selected' : ''} title={`${palette.name} · ${palette.group}`} onClick={() => changeResume((item) => { item.config.colors = { text: palette.text, background: palette.background, accent: palette.accent }; item.color = palette.accent; return item; })}><span><i style={{ background: palette.text }}/><i style={{ background: palette.background }}/><i style={{ background: palette.accent }}/></span><small>{palette.name}</small></button>)}</div>
+                <div className="studio-palette-grid">{[...colorPalettes, ...savedPalettes].map((palette) => <button key={palette.name} className={config.colors.accent === palette.accent ? 'selected' : ''} title={`${palette.name} · ${palette.group || 'Custom'}`} onClick={() => updateConfigPatch({ colors: { text: palette.text, background: palette.background, accent: palette.accent, sidebar: palette.sidebar || config.colors.sidebar, divider: palette.divider || config.colors.divider } })}><span><i style={{ background: palette.text }}/><i style={{ background: palette.background }}/><i style={{ background: palette.accent }}/></span><small>{palette.name}</small></button>)}</div>
+                <p className="studio-palette-usage"><Check size={13}/> Accent appears in headings, section lines, icons, links and dates when enabled.</p>
               </ControlGroup>
               <ControlGroup title="Custom colors">
                 <ColorField label="Text" value={config.colors.text} onChange={(value) => updateConfig('colors', 'text', value)}/>
                 <ColorField label="Background" value={config.colors.background} onChange={(value) => updateConfig('colors', 'background', value)}/>
                 <ColorField label="Accent" value={config.colors.accent} onChange={(value) => updateConfig('colors', 'accent', value)}/>
+                <ColorField label="Sidebar" value={config.colors.sidebar} onChange={(value) => updateConfig('colors', 'sidebar', value)}/>
+                <ColorField label="Divider" value={config.colors.divider} onChange={(value) => updateConfig('colors', 'divider', value)}/>
+                <button className="studio-add-entry" onClick={saveCurrentPalette}><Plus size={14}/> Save as custom palette</button>
+              </ControlGroup>
+              <ControlGroup title="Document treatment">
+                <ChoiceRow label="Header treatment" value={config.style.headerStyle} options={['editorial', 'minimal', 'centered', 'split', 'classic']} onChange={(value) => updateConfig('style', 'headerStyle', value)}/>
+                <ChoiceRow label="Sidebar style" value={config.style.sidebarStyle} options={['plain', 'tinted', 'ruled']} onChange={(value) => updateConfig('style', 'sidebarStyle', value)}/>
+                <ChoiceRow label="Divider style" value={config.style.dividerStyle} options={['accent', 'neutral', 'none']} onChange={(value) => updateConfig('style', 'dividerStyle', value)}/>
+                <ChoiceRow label="Density" value={config.layout.density} options={['compact', 'comfortable', 'spacious']} onChange={(value) => updateConfig('layout', 'density', value)}/>
               </ControlGroup>
               <ControlGroup title="Accent targets" hint="Choose where the accent color appears">
                 {Object.entries({ name: 'Name', headings: 'Section headings', headingsLine: 'Heading lines', jobTitle: 'Professional title', dates: 'Dates', headerIcons: 'Header icons', linkIcons: 'Link icons' }).map(([key, label]) => <label className="studio-switch-row" key={key}><span>{label}</span><input type="checkbox" checked={config.accentTargets[key]} onChange={(event) => updateConfig('accentTargets', key, event.target.checked)}/></label>)}
@@ -499,6 +592,8 @@ export default function BuilderWorkspace() {
       </div>
 
       {templateModal && <div className="studio-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setTemplateModal(false); }}><section className="studio-template-modal" role="dialog" aria-modal="true" aria-labelledby="template-modal-title"><div className="studio-modal-heading"><div><span>THE LILY COLLECTION</span><h2 id="template-modal-title">Choose a starting design</h2><p>Your content and sections will be preserved.</p></div><button className="studio-icon-action" onClick={() => setTemplateModal(false)} aria-label="Close template picker"><X size={19}/></button></div><div className="studio-modal-grid">{resumeTemplates.map((template) => <TemplatePreview key={template.id} template={template} selected={resume.template === template.id} onPreview={() => setTemplatePreview(template)} onUse={() => applyTemplate(template.id)}/>)}</div></section></div>}
+      {compareDesigns && <div className="studio-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCompareDesigns(false); }}><section className="studio-template-modal studio-design-compare" role="dialog" aria-modal="true" aria-labelledby="design-compare-title"><div className="studio-modal-heading"><div><span>YOUR WORDS, THREE WAYS</span><h2 id="design-compare-title">Compare designs</h2><p>Choose a direction. You can keep customizing it afterward.</p></div><button className="studio-icon-action" onClick={() => setCompareDesigns(false)} aria-label="Close comparison"><X size={19}/></button></div><div className="studio-compare-grid">{['Professional', 'Executive', 'Creative'].map((name) => { const preset = designPresets.find((item) => item.name === name); const compared = normalizeResumeConfig({ ...config, ...preset.config, typography: { ...config.typography, ...preset.config.typography }, layout: { ...config.layout, ...preset.config.layout }, style: { ...config.style, ...preset.config.style }, colors: { ...config.colors, ...preset.config.colors } }, resume.order); return <article key={name}><div className="studio-compare-paper"><Paper r={{ ...resume, config: compared }}/></div><b>{name}</b><button className="secondary-button" onClick={() => { applyDesignPreset(preset); setCompareDesigns(false); }}>Choose {name}</button></article>; })}</div></section></div>}
+      {guidedStartOpen && <div className="studio-modal-backdrop" role="presentation"><form className="studio-template-modal guided-start-dialog" role="dialog" aria-modal="true" aria-labelledby="guided-start-title" onSubmit={(event) => { event.preventDefault(); changeResume((item) => ({ ...item, title: guidedDraft.role || item.title, summary: guidedDraft.strengths ? `${guidedDraft.strengths}${guidedDraft.target ? ` I am interested in opportunities in ${guidedDraft.target}.` : ''}` : item.summary })); setGuidedStartOpen(false); setTab('content'); notify('Your notes are in the draft. Review and refine them before sharing.'); }}><div className="studio-modal-heading"><div><span>A GUIDED FIRST DRAFT</span><h2 id="guided-start-title">Start with what you know.</h2><p>These prompts organize your notes in the editor; they do not generate or invent experience.</p></div></div><label className="studio-field">What role are you aiming for?<input className="studio-input" value={guidedDraft.role} onChange={(event) => setGuidedDraft((current) => ({ ...current, role: event.target.value }))} placeholder="e.g. Product designer"/></label><label className="studio-field">What strengths or work should stand out?<textarea className="studio-input" rows="4" value={guidedDraft.strengths} onChange={(event) => setGuidedDraft((current) => ({ ...current, strengths: event.target.value }))} placeholder="Write a few notes in your own words."/></label><label className="studio-field">What kind of opportunity are you exploring?<input className="studio-input" value={guidedDraft.target} onChange={(event) => setGuidedDraft((current) => ({ ...current, target: event.target.value }))} placeholder="Industry, team, or work type"/></label><div className="guided-start-actions"><button type="button" className="secondary-button" onClick={() => setGuidedStartOpen(false)}>Skip for now</button><button type="submit" className="primary-button">Add notes to my resume <ArrowUp size={14}/></button></div></form></div>}
       {templatePreview && <div className="studio-modal-backdrop studio-template-preview-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setTemplatePreview(null); }}><section className="studio-template-modal studio-template-preview-modal" role="dialog" aria-modal="true" aria-labelledby="template-preview-title"><div className="studio-modal-heading"><div><span>{templatePreview.category.toUpperCase()} · FREE</span><h2 id="template-preview-title">{templatePreview.name}</h2><p>{templatePreview.description}</p></div><button className="studio-icon-action" onClick={() => setTemplatePreview(null)} aria-label="Close template preview"><X size={19}/></button></div><div className="studio-template-real-preview"><Paper r={{ ...resume, template: templatePreview.id, config: getTemplateConfig(templatePreview.id, resume.order), color: getTemplateConfig(templatePreview.id, resume.order).colors.accent, font: getTemplateConfig(templatePreview.id, resume.order).typography.bodyFont }} preview/></div><div className="studio-template-preview-actions"><span>{templatePreview.tags.join(' · ')}</span><button className="studio-export-button" onClick={() => { setTemplatePreview(null); applyTemplate(templatePreview.id); }}>Use this template</button></div></section></div>}
       {resumeManagerOpen && <div className="studio-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setResumeManagerOpen(false); }}><section className="studio-template-modal studio-resume-manager" role="dialog" aria-modal="true" aria-labelledby="resume-manager-title"><div className="studio-modal-heading"><div><span>YOUR WORKSPACE</span><h2 id="resume-manager-title">My resumes</h2><p>Saved in this browser. Pick up where you left off.</p></div><button className="studio-icon-action" onClick={() => setResumeManagerOpen(false)} aria-label="Close resume list"><X size={19}/></button></div><div className="studio-resume-list">{store.list.map((item) => <div className="studio-resume-row" key={item.id}><button className={`studio-icon-action ${item.fav ? 'is-favorite' : ''}`} onClick={() => setStore((current) => ({ ...current, list: current.list.map((resumeItem) => resumeItem.id === item.id ? { ...resumeItem, fav: !resumeItem.fav } : resumeItem) }))} aria-label={item.fav ? 'Remove favorite' : 'Favorite resume'}>★</button><button className="studio-resume-open" onClick={() => openResume(item.id)}><b>{item.name}</b><span>{resumeTemplates.find((template) => template.id === item.template)?.name || item.template} · {item.fullName}</span></button><button className="studio-icon-action" onClick={() => createResume(item)} aria-label="Duplicate resume"><Plus size={15}/></button><button className="studio-icon-action danger" disabled={store.list.length < 2} onClick={() => setStore((current) => { const list = current.list.filter((resumeItem) => resumeItem.id !== item.id); return { ...current, list, cur: current.cur === item.id ? list[0].id : current.cur }; })} aria-label="Delete resume"><Trash2 size={15}/></button></div>)}</div><button className="studio-export-button studio-new-resume" onClick={() => createResume()}><Plus size={15}/> Create a new resume</button></section></div>}
       <div className={`studio-toast ${toast ? 'visible' : ''}`} role="status">{toast}</div>

@@ -85,10 +85,13 @@ function Section({ resume, config, sectionKey, index }) {
     <section
       className={`resume-section resume-heading-${headingStyle}`}
       style={{
-        '--section-space': `${config.spacing.spaceBetweenSections}pt`,
+        '--section-space': `${config.layout.density === 'compact' ? config.spacing.spaceBetweenSections * 0.72 : config.layout.density === 'spacious' ? config.spacing.spaceBetweenSections * 1.3 : config.spacing.spaceBetweenSections}pt`,
         '--heading-gap': `${config.spacing.headingContentGap}pt`,
         '--heading-color': headingColor,
         '--heading-line': headingLine,
+        '--divider-color': config.colors.divider,
+        fontFamily: config.typography.headingFont,
+        letterSpacing: `${config.typography.letterSpacing}pt`,
         '--section-index': index,
       }}
       data-page-break={config.layout.pageBreaks.includes(index) ? 'true' : undefined}
@@ -148,7 +151,7 @@ export default function Paper({ r, preview = false }) {
 
   return (
     <article
-      className={`resume-paper ${config.document.pageFormat === 'US Letter' ? 'page-us-letter' : 'page-a4'} ${preview ? 'resume-paper-preview' : ''} columns-${config.layout.columns}`}
+      className={`resume-paper ${config.document.pageFormat === 'US Letter' ? 'page-us-letter' : 'page-a4'} header-${config.style.headerStyle} sidebar-${config.style.sidebarStyle} columns-${config.layout.columns}`}
       style={{
         width: pageWidth,
         minHeight: pageMinHeight,
@@ -167,6 +170,9 @@ export default function Paper({ r, preview = false }) {
         '--accent': config.colors.accent,
         '--name-color': nameColor,
         '--title-color': titleColor,
+        '--sidebar-color': config.colors.sidebar,
+        '--divider-color': config.colors.divider,
+        '--name-letter-spacing': `${config.typography.letterSpacing}pt`,
       }}
     >
       <header className="resume-paper-header">

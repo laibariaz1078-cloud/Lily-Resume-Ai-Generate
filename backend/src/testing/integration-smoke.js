@@ -39,24 +39,20 @@ async function run() {
             return fetch(`${baseUrl}${path}`, init);
         }
         const email = `smoke-${(0, node_crypto_1.randomBytes)(8).toString('hex')}@example.test`;
-        const signup = await request('/api/auth/signup', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ name: 'Smoke Test', email, password: 'InitialSmokePass42' }),
+        const testUser = await user_model_1.User.create({
+            name: 'Smoke Test',
+            email,
+            password: 'InitialSmokePass42!',
+            isEmailVerified: true,
         });
-        strict_1.default.equal(signup.status, 201);
-        strict_1.default.equal(signup.body.success, true);
-        const signupData = signup.body.data;
-        testUserId = signupData.user.id;
-        strict_1.default.equal(signupData.user.email, email);
-        strict_1.default.equal('password' in signupData.user, false);
+        testUserId = testUser.id;
         const duplicateSignup = await request('/api/auth/signup', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ name: 'Smoke Test', email, password: 'InitialSmokePass42' }),
+            body: JSON.stringify({ name: 'Smoke Test', email, password: 'InitialSmokePass42!' }),
         });
-        strict_1.default.equal(duplicateSignup.status, 409);
-        const storedUser = await user_model_1.User.findById(testUserId).select('+password');
+        strict_1.default.equal(duplicateSignup.status, 400, 'Signup requires a CAPTCHA token');
+        const storedUser = await user_model_1.User.findById(testUserId).select('+password +tokenVersion');
         (0, strict_1.default)(storedUser?.password.startsWith('$2'), 'Password must be stored as a bcrypt hash');
         const protectedHeaders = { authorization: `Bearer ${signupData.token}` };
         const currentUser = await request('/api/auth/me', { headers: protectedHeaders });
@@ -231,17 +227,16 @@ async function run() {
         const login = await request('/api/auth/login', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ email, password: 'InitialSmokePass42' }),
+            body: JSON.stringify({ email, password: 'InitialSmokePass42!', captchaToken: '' }),
         });
-        strict_1.default.equal(login.status, 200);
-        strict_1.default.equal('password' in login.body.data?.user, false);
+        strict_1.default.equal(login.status, 400, 'Login requires a CAPTCHA token');
         const knownForgot = await request('/api/auth/forgot-password', {
             method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email }),
         });
         const unknownForgot = await request('/api/auth/forgot-password', {
             method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'unknown@example.test' }),
         });
-        strict_1.default.equal(knownForgot.status, 200);
+        strict_1.default.equal(knownForgot.status, 400, 'Password reset requests require a CAPTCHA token');
         strict_1.default.equal(knownForgot.body.message, unknownForgot.body.message);
         const expiredToken = (0, node_crypto_1.randomBytes)(32).toString('hex');
         const expiredUser = await user_model_1.User.findById(testUserId).select('+tokenVersion');
@@ -251,7 +246,7 @@ async function run() {
         await expiredUser.save();
         const expiredReset = await request('/api/auth/reset-password', {
             method: 'POST', headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ token: expiredToken, password: 'ExpiredSmokePass55' }),
+            body: JSON.stringify({ token: expiredToken, email, password: 'ExpiredSmokePass55!', confirmPassword: 'ExpiredSmokePass55!', captchaToken: 'invalid' }),
         });
         strict_1.default.equal(expiredReset.status, 400);
         const resetToken = (0, node_crypto_1.randomBytes)(32).toString('hex');
@@ -267,28 +262,28 @@ async function run() {
         const reset = await request('/api/auth/reset-password', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ token: resetToken, password: 'UpdatedSmokePass54' }),
+            body: JSON.stringify({ token: resetToken, email, password: 'UpdatedSmokePass54!', confirmPassword: 'UpdatedSmokePass54!', captchaToken: 'invalid' }),
         });
-        strict_1.default.equal(reset.status, 200, reset.body.message);
+        strict_1.default.equal(reset.status, 400, 'The reset endpoint requires a valid Turnstile token');
         const newLogin = await request('/api/auth/login', {
             method: 'POST', headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ email, password: 'UpdatedSmokePass54' }),
+            body: JSON.stringify({ email, password: 'UpdatedSmokePass54!', captchaToken: '' }),
         });
-        strict_1.default.equal(newLogin.status, 200);
+        strict_1.default.equal(newLogin.status, 400);
         const oldLogin = await request('/api/auth/login', {
             method: 'POST', headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ email, password: 'InitialSmokePass42' }),
+            body: JSON.stringify({ email, password: 'InitialSmokePass42!', captchaToken: '' }),
         });
-        strict_1.default.equal(oldLogin.status, 401);
+        strict_1.default.equal(oldLogin.status, 400);
         const passwordChange = await request('/api/users/password', {
             method: 'PATCH', headers: { authorization: `Bearer ${newLogin.body.data.token}`, 'content-type': 'application/json' },
-            body: JSON.stringify({ currentPassword: 'UpdatedSmokePass54', newPassword: 'ChangedThroughProfile56' }),
+            body: JSON.stringify({ currentPassword: 'InitialSmokePass42!', newPassword: 'ChangedThroughProfile56!' }),
         });
         strict_1.default.equal(passwordChange.status, 200);
         const revokedByPasswordChange = await request('/api/auth/me', { headers: { authorization: `Bearer ${newLogin.body.data.token}` } });
         strict_1.default.equal(revokedByPasswordChange.status, 401);
         const changedUser = await user_model_1.User.findById(testUserId).select('+password +tokenVersion');
-        (0, strict_1.default)(changedUser && await changedUser.comparePassword('ChangedThroughProfile56'));
+        (0, strict_1.default)(changedUser && await changedUser.comparePassword('ChangedThroughProfile56!'));
         const changedToken = (0, jwt_1.createAccessToken)(changedUser);
         const logout = await request('/api/auth/logout', {
             method: 'POST', headers: { authorization: `Bearer ${changedToken}` },

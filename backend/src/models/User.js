@@ -24,10 +24,19 @@ const userSchema = new mongoose_1.Schema({
     role: { type: String, enum: exports.USER_ROLES, default: 'USER', required: true },
     plan: { type: String, enum: exports.USER_PLANS, default: 'FREE', required: true },
     isEmailVerified: { type: Boolean, default: false, required: true },
+    pendingEmail: { type: String, lowercase: true, trim: true, maxlength: 254, default: null },
+    emailVerificationCodeHash: { type: String, default: null, select: false },
+    emailVerificationExpiresAt: { type: Date, default: null, select: false },
+    emailVerificationAttempts: { type: Number, default: 0, select: false },
+    emailVerificationLastSentAt: { type: Date, default: null, select: false },
     lastLoginAt: { type: Date },
     tokenVersion: { type: Number, default: 0, select: false },
     resetPasswordTokenHash: { type: String, default: null, select: false },
     resetPasswordExpiresAt: { type: Date, default: null, select: false },
+    resetPasswordCodeHash: { type: String, default: null, select: false },
+    resetPasswordCodeExpiresAt: { type: Date, default: null, select: false },
+    resetPasswordCodeAttempts: { type: Number, default: 0, select: false },
+    resetPasswordCodeLastSentAt: { type: Date, default: null, select: false },
 }, {
     timestamps: true,
     toJSON: {
@@ -36,6 +45,15 @@ const userSchema = new mongoose_1.Schema({
             delete value.tokenVersion;
             delete value.resetPasswordTokenHash;
             delete value.resetPasswordExpiresAt;
+            delete value.pendingEmail;
+            delete value.emailVerificationCodeHash;
+            delete value.emailVerificationExpiresAt;
+            delete value.emailVerificationAttempts;
+            delete value.emailVerificationLastSentAt;
+            delete value.resetPasswordCodeHash;
+            delete value.resetPasswordCodeExpiresAt;
+            delete value.resetPasswordCodeAttempts;
+            delete value.resetPasswordCodeLastSentAt;
             delete value.__v;
             return value;
         },

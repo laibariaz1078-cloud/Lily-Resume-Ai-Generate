@@ -1,2 +1,7 @@
-import StudioRoute from '@/components/StudioRoute';
-export default function ProfilePage(){return <StudioRoute page="profile"/>}
+import AccountView from '@/components/AccountView';
+import { RequireAuth } from '@/components/AuthProvider';
+import StudioShell from '@/components/StudioShell';
+
+export default function ProfilePage() {
+  return <RequireAuth><StudioShell><AccountView /></StudioShell></RequireAuth>;
+}

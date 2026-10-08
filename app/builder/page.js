@@ -1,2 +1,3 @@
 import BuilderWorkspace from '@/components/BuilderWorkspace';
-export default function BuilderPage(){return <BuilderWorkspace/>}
+import {RequireAuth} from '@/components/AuthProvider';
+export default function BuilderPage(){return <RequireAuth><BuilderWorkspace/></RequireAuth>}

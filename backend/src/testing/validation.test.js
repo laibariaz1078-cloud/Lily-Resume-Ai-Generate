@@ -8,6 +8,7 @@ const node_test_1 = __importDefault(require("node:test"));
 const job_validator_1 = require("../validators/job.validator");
 const template_validator_1 = require("../validators/template.validator");
 const resume_validator_1 = require("../validators/resume.validator");
+const auth_validator_1 = require("../validators/auth.validator");
 const validTemplateSpec = {
     layout: { columns: 'single', pageSize: 'A4' },
     typography: { headingFont: 'Inter', bodyFont: 'Inter', baseFontSize: 11, headingScale: 1.3, lineHeight: 1.4 },
@@ -33,4 +34,30 @@ const validTemplateSpec = {
 });
 (0, node_test_1.default)('rejects resume data above its storage and processing budget', () => {
     strict_1.default.equal(resume_validator_1.resumeCreateSchema.safeParse({ title: 'Valid', data: { summary: 'x'.repeat(100_001) } }).success, false);
+});
+(0, node_test_1.default)('requires strong matching passwords and a CAPTCHA token during registration', () => {
+    const valid = {
+        name: 'Lily User',
+        email: 'person@example.com',
+        password: 'CareerStory42!',
+        confirmPassword: 'CareerStory42!',
+        captchaToken: 'turnstile-response',
+    };
+    strict_1.default.equal(auth_validator_1.signupSchema.safeParse(valid).success, true);
+    strict_1.default.equal(auth_validator_1.signupSchema.safeParse({ ...valid, confirmPassword: 'Different42!' }).success, false);
+    strict_1.default.equal(auth_validator_1.signupSchema.safeParse({ ...valid, password: 'alllowercase42!' }).success, false);
+    strict_1.default.equal(auth_validator_1.signupSchema.safeParse({ ...valid, captchaToken: '' }).success, false);
+});
+(0, node_test_1.default)('requires a four-digit verification or reset code and a strong reset password', () => {
+    const valid = {
+        email: 'person@example.com',
+        code: '0427',
+        password: 'NewCareer42!',
+        confirmPassword: 'NewCareer42!',
+        captchaToken: 'turnstile-response',
+    };
+    strict_1.default.equal(auth_validator_1.resetPasswordSchema.safeParse(valid).success, true);
+    strict_1.default.equal(auth_validator_1.resetPasswordSchema.safeParse({ ...valid, code: '427' }).success, false);
+    strict_1.default.equal(auth_validator_1.resetPasswordSchema.safeParse({ ...valid, confirmPassword: 'Mismatch42!' }).success, false);
+    strict_1.default.equal(auth_validator_1.verifyEmailSchema.safeParse({ email: valid.email, code: valid.code, captchaToken: valid.captchaToken }).success, true);
 });

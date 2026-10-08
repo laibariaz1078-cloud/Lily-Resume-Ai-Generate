@@ -1,0 +1,3 @@
+.profile-popover button{display:flex;align-items:center;gap:8px;border:0;background:transparent;padding:8px;color:var(--ink-soft);font:inherit;font-size:10px;text-align:left;cursor:pointer}
+.profile-popover button:hover{background:var(--surface-soft);color:var(--primary)}
+.profile-logout-error{padding:6px 8px;color:var(--danger);font-size:9px;line-height:1.5}

@@ -6,14 +6,16 @@ Base URL: `http://localhost:4000/api`. All JSON endpoints use `{ "success": true
 
 | Method | URL | Auth | Request | Success data | Common errors |
 |---|---|---|---|---|---|
-| POST | `/auth/signup` | No | `{name,email,password}` | `{user,token}` | 400 validation, 409 duplicate email, 429 rate limit |
-| POST | `/auth/login` | No | `{email,password}` | `{user,token}` | 400 validation, 401 invalid credentials, 429 |
-| GET | `/auth/me` | Yes | None | `{user}` | 401 invalid/expired token |
-| POST | `/auth/logout` | Yes | None | `{}` | 401 |
-| POST | `/auth/forgot-password` | No | `{email}` | Generic confirmation | 400, 429 |
-| POST | `/auth/reset-password` | No | `{token,password}` | Confirmation | 400 invalid/expired token, 429 |
+| POST | `/auth/signup` | No | `{name,email,password,confirmPassword,captchaToken}` | Verification message and `{email}` | 400 validation/CAPTCHA, 409 duplicate email, 429, 503 email |
+| POST | `/auth/login` | No | `{email,password,captchaToken,rememberMe?}` | `{user}` and HttpOnly session cookie | 400 validation/CAPTCHA, 401 invalid credentials, 403 unverified email, 429 |
+| POST | `/auth/verify-email` | No | `{email,code,captchaToken}` | Verification confirmation | 400 invalid/expired code, 429 |
+| POST | `/auth/resend-verification` | No | `{email,captchaToken}` | Generic confirmation | 400, 429, 503 email |
+| GET | `/auth/me` | Yes | None | `{user}` | 401 invalid/expired session or token |
+| POST | `/auth/logout` | No | None | `{}`; revokes current session or bearer token when supplied | 403 disallowed cookie origin |
+| POST | `/auth/forgot-password` | No | `{email,captchaToken}` | Generic confirmation | 400, 429, 503 email |
+| POST | `/auth/reset-password` | No | `{email,code,password,confirmPassword,captchaToken}` | Confirmation; all active sessions revoked | 400 invalid/expired code, 429 |
 
-Passwords are never returned. Password-reset delivery requires configured SMTP.
+Browser auth uses opaque MongoDB-backed sessions in HttpOnly cookies; existing clients may continue to use bearer JWTs. Auth routes require a valid Cloudflare Turnstile response and SMTP delivery for email codes. Verification and reset codes expire after 10 minutes and are limited to five attempts. Passwords are never returned.
 
 ## Users And Settings
 
@@ -25,7 +27,7 @@ Passwords are never returned. Password-reset delivery requires configured SMTP.
 | PATCH | `/users/password` | Yes | `{currentPassword,newPassword}` | `{}`; current tokens revoked | 400 wrong current password, 401 |
 | PATCH | `/users/settings` | Yes | Partial `{theme,notifications,ai}` | `{settings}` | 400 validation |
 
-Changing email marks it unverified. Settings accept `theme: LIGHT|DARK|SYSTEM`, notification booleans `weeklySummary`/`productNews`, and AI booleans `suggestions`/`considerJobDescriptions`/`requireReview`.
+Changing email keeps the current address active until the new address is verified. Password changes revoke all active sessions and bearer tokens. Passwords must include uppercase and lowercase letters, a number, and a symbol. Settings accept `theme: LIGHT|DARK|SYSTEM`, notification booleans `weeklySummary`/`productNews`, and AI booleans `suggestions`/`considerJobDescriptions`/`requireReview`.
 
 ## Resumes
 
@@ -101,7 +103,7 @@ Development uses a mock payment provider and stores no card data. Upgrade/renew 
 
 ## Admin
 
-All endpoints require a valid bearer token and `ADMIN` role. Admin creation is not exposed through public signup.
+All endpoints require an authenticated session or valid bearer token and `ADMIN` role. Admin creation is not exposed through public signup.
 
 | Method | URL | Auth | Request | Success data | Common errors |
 |---|---|---|---|---|---|

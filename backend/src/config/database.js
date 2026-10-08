@@ -17,6 +17,7 @@ const subscription_model_1 = require("../models/Subscription");
 const template_model_1 = require("../models/Template");
 const user_model_1 = require("../models/User");
 const user_settings_model_1 = require("../models/UserSettings");
+const session_model_1 = require("../models/Session");
 mongoose_1.default.set('sanitizeFilter', true);
 async function connectDatabase() {
     try {
@@ -37,6 +38,7 @@ async function connectDatabase() {
             resume_analysis_model_1.ResumeAnalysis.createIndexes(),
             subscription_model_1.Subscription.createIndexes(),
             template_model_1.Template.createIndexes(),
+            session_model_1.Session.createIndexes(),
         ]);
         if (env_1.env.NODE_ENV !== 'production') {
             console.info(`MongoDB connected (${connection.connection.name})`);

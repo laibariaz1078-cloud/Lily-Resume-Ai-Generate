@@ -17,6 +17,7 @@ const subscription_model_1 = require("../models/Subscription");
 const template_model_1 = require("../models/Template");
 const user_model_1 = require("../models/User");
 const user_settings_model_1 = require("../models/UserSettings");
+const session_model_1 = require("../models/Session");
 const resume_data_1 = require("../utils/resume-data");
 const resume_validator_1 = require("../validators/resume.validator");
 const userId = new mongoose_1.Types.ObjectId();
@@ -171,4 +172,16 @@ const validTemplateSpec = {
     strict_1.default.deepEqual(job.responsibilities, []);
     strict_1.default.deepEqual(job.qualifications, []);
     strict_1.default.deepEqual(job.keywords, []);
+});
+(0, node_test_1.default)('session tokens are hashed and session expiry is required', async () => {
+    const session = new session_model_1.Session({
+        userId,
+        tokenHash: 'a'.repeat(64),
+        tokenVersion: 0,
+        expiresAt: new Date(Date.now() + 60_000),
+    });
+    await session.validate();
+    strict_1.default.equal(session_model_1.Session.schema.path('tokenHash').options.select, false);
+    strict_1.default.equal(session_model_1.Session.schema.indexes().some(([keys, options]) => keys.expiresAt === 1 && options.expireAfterSeconds === 0), true);
+    await strict_1.default.rejects(new session_model_1.Session({ userId, tokenHash: 'b'.repeat(64), tokenVersion: 0 }).validate());
 });

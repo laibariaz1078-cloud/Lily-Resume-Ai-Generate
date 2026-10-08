@@ -21,6 +21,7 @@ const apiRateLimit = (0, express_rate_limit_1.rateLimit)({
     message: { success: false, message: 'Too many requests. Please try again later.', errors: [] },
 });
 exports.app.disable('x-powered-by');
+exports.app.set('trust proxy', env_1.env.TRUST_PROXY_HOPS);
 exports.app.use((0, helmet_1.default)());
 exports.app.use((req, res, next) => {
     const startedAt = Date.now();
@@ -43,6 +44,14 @@ exports.app.use((0, cors_1.default)({
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 exports.app.use(express_1.default.json({ limit: '256kb' }));
+exports.app.use('/api', (req, _res, next) => {
+    const hasSessionCookie = (req.get('cookie') ?? '').includes(`${env_1.env.SESSION_COOKIE_NAME}=`);
+    if (hasSessionCookie && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)
+        && req.get('origin') !== env_1.env.CLIENT_URL) {
+        return next(new api_error_1.ApiError(403, 'Request origin is not allowed'));
+    }
+    next();
+});
 exports.app.use('/api', apiRateLimit, routes_1.apiRouter);
 exports.app.use(error_middleware_1.notFoundMiddleware);
 exports.app.use(error_middleware_1.errorMiddleware);

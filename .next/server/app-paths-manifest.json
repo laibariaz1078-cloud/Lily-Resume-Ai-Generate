@@ -1,20 +1,7 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/[page]/page": "app/[page]/page.js",
-  "/ats-analyzer/page": "app/ats-analyzer/page.js",
-  "/ai-assistant/page": "app/ai-assistant/page.js",
-  "/builder/page": "app/builder/page.js",
-  "/cover-letters/page": "app/cover-letters/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/cursor-glow/page": "app/cursor-glow/page.js",
-  "/job-tracker/page": "app/job-tracker/page.js",
-  "/favorites/page": "app/favorites/page.js",
-  "/profile/page": "app/profile/page.js",
+  "/[page]/page": "app/[page]/page.js",
+  "/builder/page": "app/builder/page.js",
   "/resumes/page": "app/resumes/page.js",
-  "/settings/page": "app/settings/page.js",
-  "/start/page": "app/start/page.js",
-  "/theme-studio/page": "app/theme-studio/page.js",
-  "/subscription/page": "app/subscription/page.js",
-  "/workspace/templates/page": "app/workspace/templates/page.js",
   "/page": "app/page.js"
 }

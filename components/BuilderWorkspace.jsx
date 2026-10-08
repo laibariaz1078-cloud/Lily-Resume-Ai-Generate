@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import Paper from '@/components/Paper';
 import AiBar from '@/components/AiBar';
+import { ThemeSwitcher } from '@/components/ThemeStudio';
 import { LISTS, SECTIONS, blank, keywordGaps } from '@/lib/resume';
 import { colorPalettes, designPresets, getTemplateConfig, normalizeResumeConfig, resumeTemplates } from '@/lib/resume-design';
 
@@ -430,6 +431,7 @@ export default function BuilderWorkspace() {
           <button className="studio-toolbar-button" onClick={redo} disabled={!future.length} aria-label="Redo"><Redo2 size={16}/></button>
           <button className="studio-toolbar-button studio-toolbar-template" onClick={() => setResumeManagerOpen(true)}><FileText size={15}/> My resumes</button>
           <button className="studio-toolbar-button studio-toolbar-template" onClick={() => setTemplateModal(true)}><LayoutTemplate size={15}/> Change template</button>
+          <ThemeSwitcher/>
           <button className="studio-export-button" onClick={() => window.print()}><Save size={15}/> Download PDF</button>
         </div>
       </header>
